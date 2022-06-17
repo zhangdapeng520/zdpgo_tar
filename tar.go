@@ -4,12 +4,14 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"errors"
+	"fmt"
 	"github.com/zhangdapeng520/zdpgo_log"
 	"io"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 )
 
 /*
@@ -288,6 +290,70 @@ func (t *Tar) UnTarGz(srcFilePath string, destDirPath string) error {
 
 	// 返回
 	return nil
+}
+
+func (t *Tar) DeleteDirAll(dirPath string) error {
+	files, err := ioutil.ReadDir(dirPath)
+	if err != nil {
+		Log.Error("read directory error", "error", err)
+		return err
+	}
+
+	for _, f := range files {
+		if !f.IsDir() && strings.HasSuffix(f.Name(), ".tar.gz") {
+			err = os.Remove(filepath.Join(dirPath, f.Name()))
+			if err != nil {
+				Log.Error("remove file error", "error", err)
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+func (t *Tar) UnTarGzDir(dirPath string) error {
+	files, err := ioutil.ReadDir(dirPath)
+	if err != nil {
+		Log.Error("read directory error", "error", err)
+		return err
+	}
+
+	for _, f := range files {
+		if !f.IsDir() && strings.HasSuffix(f.Name(), ".tar.gz") {
+			dirName := strings.Replace(f.Name(), ".tar.gz", "", 1)
+
+			// auto rename
+			targetName := filepath.Join(dirPath, dirName)
+			if t.IsExists(targetName) {
+				var (
+					tmpName = targetName
+					count   = 1
+				)
+				for {
+					targetName += fmt.Sprintf("(%d)", count)
+					if !t.IsExists(tmpName) {
+						break
+					}
+					tmpName += fmt.Sprintf("(%d)", count)
+					count++
+				}
+			}
+
+			// execute un compress
+			err = t.UnTarGz(filepath.Join(dirPath, f.Name()), targetName)
+			if err != nil {
+				Log.Error("un compress tar.gz error", "error", err)
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (t *Tar) IsExists(filePath string) bool {
+	_, err := os.Stat(filePath)
+	return err == nil
 }
 
 // UnTarGzToSameDir 解压.tar.gz压缩包到该文件所在目录

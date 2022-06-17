@@ -9,6 +9,4 @@ package zdpgo_tar
 */
 
 type Config struct {
-	Debug       bool   `yaml:"debug" json:"debug"`
-	LogFilePath string `yaml:"log_file_path" json:"log_file_path"`
 }

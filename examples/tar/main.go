@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/zhangdapeng520/zdpgo_log"
 	"github.com/zhangdapeng520/zdpgo_tar"
 )
 
@@ -14,7 +13,7 @@ import (
 */
 
 func main() {
-	tar := zdpgo_tar.New(zdpgo_log.Tmp)
+	tar := zdpgo_tar.New()
 
 	// compress
 	err := tar.TarGz("examples/tar/data", "examples/tar/data.tar.gz")

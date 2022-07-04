@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"errors"
 	"fmt"
-	"github.com/zhangdapeng520/zdpgo_log"
 	"io"
 	"io/ioutil"
 	"os"
@@ -22,23 +21,16 @@ import (
 @Description:
 */
 
-var (
-	Log *zdpgo_log.Log
-)
-
 type Tar struct {
 	Config *Config
 }
 
-func New(log *zdpgo_log.Log) *Tar {
-	return NewWithConfig(&Config{}, log)
+func New() *Tar {
+	return NewWithConfig(&Config{})
 }
 
-func NewWithConfig(config *Config, log *zdpgo_log.Log) *Tar {
+func NewWithConfig(config *Config) *Tar {
 	t := &Tar{}
-
-	// 日志
-	Log = log
 
 	// 配置
 	t.Config = config
@@ -51,7 +43,6 @@ func NewWithConfig(config *Config, log *zdpgo_log.Log) *Tar {
 func (t *Tar) TarGz(srcDirPath string, destFilePath string) error {
 	fw, err := os.Create(destFilePath)
 	if err != nil {
-		Log.Error("创建压缩文件失败", "error", err)
 		return err
 	}
 	defer fw.Close()
@@ -67,14 +58,12 @@ func (t *Tar) TarGz(srcDirPath string, destFilePath string) error {
 	// 检查是文件夹还是文件
 	f, err := os.Open(srcDirPath)
 	if err != nil {
-		Log.Error("打开文件失败", "error", err)
 		return err
 	}
 
 	// 获取文件信息
 	fi, err := f.Stat()
 	if err != nil {
-		Log.Error("获取文件信息失败", "error", err)
 		return err
 	}
 
@@ -82,13 +71,11 @@ func (t *Tar) TarGz(srcDirPath string, destFilePath string) error {
 	if fi.IsDir() {
 		err = t.TarGzDir(srcDirPath, path.Base(srcDirPath), tw)
 		if err != nil {
-			Log.Error("压缩文件夹失败", "error", err)
 			return err
 		}
 	} else {
 		err = t.TarGzFile(srcDirPath, fi.Name(), tw, fi)
 		if err != nil {
-			Log.Error("压缩文件失败", "error", err)
 			return err
 		}
 	}
@@ -116,7 +103,6 @@ func (t *Tar) TarGzDirFiles(dirPath string, files []string) error {
 func (t *Tar) TarGzDirAllFiles(dirPath string) error {
 	files, err := ioutil.ReadDir(dirPath)
 	if err != nil {
-		Log.Error("读取文件夹失败", "error", err)
 		return err
 	}
 
@@ -140,7 +126,6 @@ func (t *Tar) TarGzDir(srcDirPath string, recPath string, tw *tar.Writer) error 
 	// 打开文件夹
 	dir, err := os.Open(srcDirPath)
 	if err != nil {
-		Log.Error("打开文件夹失败", "error", err)
 		return err
 	}
 	defer dir.Close()
@@ -148,7 +133,6 @@ func (t *Tar) TarGzDir(srcDirPath string, recPath string, tw *tar.Writer) error 
 	// 读取文件
 	fis, err := dir.Readdir(0)
 	if err != nil {
-		Log.Error("读取文件失败", "error", err)
 		return err
 	}
 
@@ -160,14 +144,12 @@ func (t *Tar) TarGzDir(srcDirPath string, recPath string, tw *tar.Writer) error 
 		if fi.IsDir() {
 			err = t.TarGzDir(curPath, recPath+"/"+fi.Name(), tw)
 			if err != nil {
-				Log.Error("递归压缩文件夹失败", "error", err)
 				return err
 			}
 		}
 		// 压缩文件
 		err = t.TarGzFile(curPath, recPath+"/"+fi.Name(), tw, fi)
 		if err != nil {
-			Log.Error("压缩文件失败", "error", err)
 			return err
 		}
 	}
@@ -188,14 +170,12 @@ func (t *Tar) TarGzFile(srcFile string, recPath string, tw *tar.Writer, fi os.Fi
 		hdr.ModTime = fi.ModTime()
 		err := tw.WriteHeader(hdr)
 		if err != nil {
-			Log.Error("写入头部数据失败", "error", err)
 			return err
 		}
 	} else {
 		// 打开文件
 		fr, err := os.Open(srcFile)
 		if err != nil {
-			Log.Error("打开文件失败", "error", err)
 			return err
 		}
 		defer fr.Close()
@@ -210,14 +190,12 @@ func (t *Tar) TarGzFile(srcFile string, recPath string, tw *tar.Writer, fi os.Fi
 		// 写入头部
 		err = tw.WriteHeader(hdr)
 		if err != nil {
-			Log.Error("写入头部数据失败", "error", err)
 			return err
 		}
 
 		// 写入数据
 		_, err = io.Copy(tw, fr)
 		if err != nil {
-			Log.Error("写入数据失败", "error", err)
 			return err
 		}
 	}
@@ -234,14 +212,12 @@ func (t *Tar) UnTarGz(srcFilePath string, destDirPath string) error {
 
 	err := os.Mkdir(destDirPath, os.ModePerm)
 	if err != nil {
-		Log.Error("创建解压目标目录失败", "error", err)
 		return err
 	}
 
 	// 打开源文件
 	fr, err := os.Open(srcFilePath)
 	if err != nil {
-		Log.Error("打开源文件失败", "error", err)
 		return err
 	}
 	defer fr.Close()
@@ -249,7 +225,6 @@ func (t *Tar) UnTarGz(srcFilePath string, destDirPath string) error {
 	// 创建gzip读取器
 	gr, err := gzip.NewReader(fr)
 	if err != nil {
-		Log.Error("创建gzip读取器失败", "error", err)
 		return err
 	}
 
@@ -262,13 +237,11 @@ func (t *Tar) UnTarGz(srcFilePath string, destDirPath string) error {
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			Log.Error("读取压缩包失败", "error", err)
 			return err
 		}
 		if hdr.Typeflag != tar.TypeDir {
 			err = os.MkdirAll(destDirPath+"/"+path.Dir(hdr.Name), os.ModePerm)
 			if err != nil {
-				Log.Error("创建解压目标目录失败", "error", err)
 				return err
 			}
 
@@ -276,13 +249,12 @@ func (t *Tar) UnTarGz(srcFilePath string, destDirPath string) error {
 			var fw *os.File
 			fw, err = os.Create(destDirPath + "/" + hdr.Name)
 			if err != nil {
-				Log.Error("写入文件数据失败", "error", err)
+				return err
 			}
 
 			// 复制文件
 			_, err = io.Copy(fw, tr)
 			if err != nil {
-				Log.Error("复制文件失败", "error", err)
 				return err
 			}
 		}
@@ -295,7 +267,6 @@ func (t *Tar) UnTarGz(srcFilePath string, destDirPath string) error {
 func (t *Tar) DeleteDirAll(dirPath string) error {
 	files, err := ioutil.ReadDir(dirPath)
 	if err != nil {
-		Log.Error("read directory error", "error", err)
 		return err
 	}
 
@@ -303,7 +274,6 @@ func (t *Tar) DeleteDirAll(dirPath string) error {
 		if !f.IsDir() && strings.HasSuffix(f.Name(), ".tar.gz") {
 			err = os.Remove(filepath.Join(dirPath, f.Name()))
 			if err != nil {
-				Log.Error("remove file error", "error", err)
 				return err
 			}
 		}
@@ -314,7 +284,6 @@ func (t *Tar) DeleteDirAll(dirPath string) error {
 func (t *Tar) UnTarGzDir(dirPath string) error {
 	files, err := ioutil.ReadDir(dirPath)
 	if err != nil {
-		Log.Error("read directory error", "error", err)
 		return err
 	}
 
@@ -342,7 +311,6 @@ func (t *Tar) UnTarGzDir(dirPath string) error {
 			// execute un compress
 			err = t.UnTarGz(filepath.Join(dirPath, f.Name()), targetName)
 			if err != nil {
-				Log.Error("un compress tar.gz error", "error", err)
 				return err
 			}
 		}
@@ -363,7 +331,6 @@ func (t *Tar) UnTarGzToSameDir(srcFilePath string) error {
 	// 打开源文件
 	fr, err := os.Open(srcFilePath)
 	if err != nil {
-		Log.Error("打开源文件失败", "error", err)
 		return err
 	}
 	defer fr.Close()
@@ -371,7 +338,6 @@ func (t *Tar) UnTarGzToSameDir(srcFilePath string) error {
 	// 创建gzip读取器
 	gr, err := gzip.NewReader(fr)
 	if err != nil {
-		Log.Error("创建gzip读取器失败", "error", err)
 		return err
 	}
 
@@ -384,13 +350,11 @@ func (t *Tar) UnTarGzToSameDir(srcFilePath string) error {
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			Log.Error("读取压缩包失败", "error", err)
 			return err
 		}
 		if hdr.Typeflag != tar.TypeDir {
 			err = os.MkdirAll(dirPath+"/"+path.Dir(hdr.Name), os.ModePerm)
 			if err != nil {
-				Log.Error("创建解压目标目录失败", "error", err)
 				return err
 			}
 
@@ -398,13 +362,12 @@ func (t *Tar) UnTarGzToSameDir(srcFilePath string) error {
 			var fw *os.File
 			fw, err = os.Create(dirPath + "/" + hdr.Name)
 			if err != nil {
-				Log.Error("写入文件数据失败", "error", err)
+				return err
 			}
 
 			// 复制文件
 			_, err = io.Copy(fw, tr)
 			if err != nil {
-				Log.Error("复制文件失败", "error", err)
 				return err
 			}
 		}
@@ -425,7 +388,6 @@ func (t *Tar) UnTarGzToSameDirAndDelete(srcFilePath string) error {
 	// 删除
 	err = os.RemoveAll(srcFilePath)
 	if err != nil {
-		Log.Error("删除压缩文件失败", "error", err)
 		return err
 	}
 
